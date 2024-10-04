@@ -12,14 +12,18 @@ use App\Enum\FoodType;
 use App\Enum\Unit;
 use App\Repository\FoodRepositoryInterface;
 use App\Utils\Converter\UnitConverter;
+use Psr\Log\LoggerInterface;
 
 class FoodCollectionService implements FoodCollectionServiceInterface
 {
     private FoodRepositoryInterface $foodRepository;
 
-    public function __construct(FoodRepositoryInterface $foodRepository)
+    private LoggerInterface $logger;
+
+    public function __construct(FoodRepositoryInterface $foodRepository, LoggerInterface $logger)
     {
         $this->foodRepository = $foodRepository;
+        $this->logger = $logger;
     }
 
     public function extractCollections(array $foodItems): array
@@ -28,6 +32,15 @@ class FoodCollectionService implements FoodCollectionServiceInterface
         $vegetableCollection = new VegetableCollection();
 
         foreach ($foodItems as $item) {
+            // Validate food item before transforming
+            if (!$this->validateFoodItem($item)) {
+                $this->logger->error('Invalid food item detected', [
+                    'item' => $item,
+                    'timestamp' => date('Y-m-d H:i:s')
+                ]);
+                continue;
+            }
+
             $item = $this->transformFoodData($item);
 
             $foodDto = FoodDto::fromArray($item);
@@ -46,7 +59,13 @@ class FoodCollectionService implements FoodCollectionServiceInterface
     {
         $entities = $this->convertDtosToEntities($collection->list());
 
-        $this->foodRepository->addMany($entities);
+        if (empty($entities)) {
+            return;
+        }
+
+        foreach ($entities as $entity) {
+            $this->foodRepository->add($entity);
+        }
     }
 
     private function convertDtosToEntities(array $foodDtos): array
@@ -57,8 +76,15 @@ class FoodCollectionService implements FoodCollectionServiceInterface
 
         $entities = [];
 
+        /** @var \App\Dto\FoodDtoInterface $foodDto */
         foreach ($foodDtos as $foodDto) {
-            $entities[] = Food::fromDto($foodDto);
+            $entities[] = new Food(
+                $foodDto->getId(),
+                $foodDto->getName(),
+                $foodDto->getType(),
+                $foodDto->getQuantity(),
+                $foodDto->getUnit()
+            );
         }
 
         return $entities;
@@ -67,7 +93,7 @@ class FoodCollectionService implements FoodCollectionServiceInterface
     private function transformFoodData(array $item): array
     {
         $unit = Unit::from($item['unit']);
-        $quantity = (int) $item['quantity'];
+        $quantity = $item['quantity'];
 
         $quantityInGram = UnitConverter::convertToGram($quantity, $unit);
 
@@ -75,5 +101,41 @@ class FoodCollectionService implements FoodCollectionServiceInterface
         $item['unit'] = Unit::Gram->value;
 
         return $item;
+    }
+
+    private function validateFoodItem(array $item): bool
+    {
+        $requiredFields = [
+            'id' => 'integer',
+            'name' => 'string',
+            'quantity' => 'integer',
+            'unit' => 'string', 
+            'type' => 'string'
+        ];
+
+        foreach ($requiredFields as $field => $type) {
+            if (!array_key_exists($field, $item)) {
+                // Log missing field error
+                $this->logger->error('Missing field in food item', [
+                    'item' => $item,
+                    'missing_field' => $field,
+                    'timestamp' => date('Y-m-d H:i:s')
+                ]);
+                return false;
+            }
+
+            // Validate field type
+            if (gettype($item[$field]) !== $type) {
+                $this->logger->error('Type mismatch in food item', [
+                    'item' => $item,
+                    'expected_type' => $type,
+                    'actual_type' => gettype($item[$field]),
+                    'timestamp' => date('Y-m-d H:i:s')
+                ]);
+                return false;
+            }
+        }
+
+        return true;
     }
 }

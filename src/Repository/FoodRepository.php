@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Dto\SearchFoodCriteria;
 use App\Entity\Food;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -22,18 +23,35 @@ class FoodRepository extends ServiceEntityRepository implements FoodRepositoryIn
         $entityManager->flush();
     }
 
-    public function addMany(array $foodEntities): void
+    public function search(SearchFoodCriteria $criteria): array
     {
-        if (empty($foodEntities)) {
-            return;
+        $qb = $this->createQueryBuilder('f');
+
+        if ($criteria->getName()) {
+            $qb->andWhere('f.name LIKE :name')
+                ->setParameter('name', '%' . $criteria->getName() . '%');
         }
 
-        $entityManager = $this->getEntityManager();
-
-        foreach ($foodEntities as $entity) {
-            $entityManager->persist($entity);
+        if ($criteria->getType()) {
+            $qb->andWhere('f.type = :type')
+                ->setParameter('type', $criteria->getType());
         }
 
-        $entityManager->flush();
+        if ($criteria->getMinQuantity()) {
+            $qb->andWhere('f.quantity >= :minQuantity')
+                ->setParameter('minQuantity', $criteria->getMinQuantity());
+        }
+
+        if ($criteria->getMaxQuantity()) {
+            $qb->andWhere('f.quantity <= :maxQuantity')
+                ->setParameter('maxQuantity', $criteria->getMaxQuantity());
+        }
+
+        if ($criteria->getUnit()) {
+            $qb->andWhere('f.unit = :unit')
+                ->setParameter('unit', $criteria->getUnit());
+        }
+
+        return $qb->getQuery()->getResult();
     }
 }

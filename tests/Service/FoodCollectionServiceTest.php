@@ -1,55 +1,69 @@
 <?php
 declare(strict_types=1);
 
-use PHPUnit\Framework\TestCase;
-use App\Service\FoodCollectionService;
+namespace App\Tests\Service;
+
 use App\Collection\FruitCollection;
 use App\Collection\VegetableCollection;
-use App\Repository\FoodRepositoryInterface;
 use App\Dto\FoodDto;
-use App\Enum\Unit;
-use App\Enum\FoodType;
+use App\Entity\Food;
+use App\Service\FoodCollectionService;
+use App\Repository\FoodRepositoryInterface;
+use Psr\Log\LoggerInterface;
+use PHPUnit\Framework\TestCase;
 
-class FoodCollectionServiceTest extends TestCase
+final class FoodCollectionServiceTest extends TestCase
 {
-    public function testExtractCollections()
+    private FoodRepositoryInterface $foodRepositoryMock;
+    private LoggerInterface $loggerMock;
+
+    protected function setUp(): void
     {
-        // Arrange
-        $repositoryMock = $this->createMock(FoodRepositoryInterface::class);
-        $service = new FoodCollectionService($repositoryMock);
-
-        $foodItems = [
-            ['id' => 1, 'name' => 'Apple', 'quantity' => 100, 'unit' => 'g', 'type' => 'fruit'],
-            ['id' => 2, 'name' => 'Carrot', 'quantity' => 200, 'unit' => 'g', 'type' => 'vegetable']
-        ];
-
-        // Act
-        [$fruitCollection, $vegetableCollection] = $service->extractCollections($foodItems);
-
-        // Assert
-        $this->assertInstanceOf(FruitCollection::class, $fruitCollection);
-        $this->assertInstanceOf(VegetableCollection::class, $vegetableCollection);
-        $this->assertCount(1, $fruitCollection->list());
-        $this->assertCount(1, $vegetableCollection->list());
+        $this->foodRepositoryMock = $this->createMock(FoodRepositoryInterface::class);
+        $this->loggerMock = $this->createMock(LoggerInterface::class);
     }
 
-    public function testSaveCollection()
+    public function testExtractCollections(): void
     {
-        // Arrange
-        $repositoryMock = $this->createMock(FoodRepositoryInterface::class);
-        $repositoryMock->expects($this->once())
-            ->method('addMany')
-            ->with($this->isType('array'));
+        $foodCollectionService = new FoodCollectionService($this->foodRepositoryMock, $this->loggerMock);
 
-        $service = new FoodCollectionService($repositoryMock);
-        $collection = new FruitCollection();
+        $foodItems = [
+            ['id' => 1, 'name' => 'Apple', 'quantity' => 2, 'unit' => 'kg', 'type' => 'fruit'],
+            ['id' => 2, 'name' => 'Carrot', 'quantity' => 1, 'unit' => 'kg', 'type' => 'vegetable'],
+            ['id' => 3, 'name' => 'Invalid Item', 'quantity' => 'invalid', 'unit' => 'kg', 'type' => 'fruit'], // Invalid
+        ];
 
-        $foodDto = new FoodDto(1, 'Apple', 100, Unit::Gram, FoodType::Fruit);
-        $collection->add($foodDto);
+        [$fruitCollection, $vegetableCollection] = $foodCollectionService->extractCollections($foodItems);
 
-        // Act
-        $service->saveCollection($collection);
+        $this->assertInstanceOf(FruitCollection::class, $fruitCollection);
+        $this->assertInstanceOf(VegetableCollection::class, $vegetableCollection);
+        $this->assertCount(1, $fruitCollection->list()); // Only valid fruit item
+        $this->assertCount(1, $vegetableCollection->list()); // One valid vegetable
+    }
 
-        // Assert: The mock ensures that addMany is called with the correct array of entities
+    public function testSaveCollection(): void
+    {
+        $foodCollectionService = new FoodCollectionService($this->foodRepositoryMock, $this->loggerMock);
+
+        $fruitCollection = new FruitCollection();
+        $foodDto = FoodDto::fromArray([
+            'id' => 1,
+            'name' => 'Apple',
+            'quantity' => 2000,
+            'unit' => 'g',
+            'type' => 'fruit'
+        ]);
+
+        $fruitCollection->add($foodDto);
+
+        $this->foodRepositoryMock
+            ->expects($this->once())
+            ->method('add')
+            ->with($this->callback(function ($entity) {
+                $this->assertInstanceOf(Food::class, $entity);
+                return true;
+            }));
+
+        $foodCollectionService->saveCollection($fruitCollection);
     }
 }

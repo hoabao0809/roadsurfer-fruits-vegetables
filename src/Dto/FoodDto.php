@@ -32,10 +32,10 @@ final class FoodDto implements FoodDtoInterface
      * @var int Quantity of the food item
      * 
      * @Assert\NotBlank
-     * @Assert\Type("integer")
+     * @Assert\Type("float")
      * @Assert\Positive
      */
-    private int $quantity;
+    private float $quantity;
 
     /**
      * @var Unit Unit type of the food item
@@ -56,14 +56,14 @@ final class FoodDto implements FoodDtoInterface
      *
      * @param ?int $id
      * @param string $name
-     * @param int $quantity
+     * @param float $quantity
      * @param Unit $unit
      * @param FoodType $type
      */
     public function __construct(
         ?int $id,
         string $name,
-        int $quantity,
+        float $quantity,
         Unit $unit,
         FoodType $type
     ) {
@@ -97,9 +97,9 @@ final class FoodDto implements FoodDtoInterface
     /**
      * Get the quantity of the food item.
      *
-     * @return int
+     * @return float
      */
-    public function getQuantity(): int
+    public function getQuantity(): float
     {
         return $this->quantity;
     }
@@ -140,7 +140,7 @@ final class FoodDto implements FoodDtoInterface
             return new self(
                 $data['id'] ?? null,
                 (string) $data['name'],
-                (int) $data['quantity'],
+                (float) $data['quantity'],
                 $unit,
                 $type
             );

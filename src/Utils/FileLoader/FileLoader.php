@@ -10,10 +10,11 @@ abstract class FileLoader implements FileLoaderInterface
     public function load(string $filePath): array
     {
         if (!file_exists($filePath)) {
-            throw new FileNotFoundException("File not found: $filePath");
+            throw new FileNotFoundException("File not found.");
         }
-
+     
         $fileContents = file_get_contents($filePath);
+        
         return $this->parse($fileContents);
     }
 

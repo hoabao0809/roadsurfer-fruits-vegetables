@@ -1,0 +1,7 @@
+api_platform:
+    title: 'Your API Title'
+    description: 'API description'
+    version: '1.0.0'
+    enable_docs: true
+    mapping:
+        paths: ['%kernel.project_dir%/src/Entity']  # Use kernel.project_dir to avoid relative path issues

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Dto\FoodDtoInterface;
 use App\Enum\FoodType;
 use App\Enum\Unit;
 use App\Repository\FoodRepository;
@@ -19,18 +18,17 @@ class Food
     private int $id;
 
     #[ORM\Column(type: 'string')]
+    #[Assert\NotBlank]
     private string $name;
 
-    #[ORM\Column(enumType: FoodType::class)]
-    #[Assert\Choice(choices: ['fruit', 'vegetable'], message: 'Invalid food type.')]
+    #[ORM\Column(enumType: FoodType::class, nullable: true)]
     private FoodType $type;
 
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column(type: 'float')]
     #[Assert\Positive]
-    private int $quantity;
+    private float $quantity;
 
     #[ORM\Column(enumType: Unit::class, nullable: true)]
-    #[Assert\Choice(choices: [Unit::Gram, Unit::Kilogram])]
     private ?Unit $unit = null;
 
     #[ORM\Column(type: "datetime_immutable", nullable: false)]
@@ -39,11 +37,10 @@ class Food
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $updated_at = null;
 
-    // Constructor
-    public function __construct(?int $id, string $name, FoodType $type, int $quantity, ?Unit $unit = null)
+    public function __construct(?int $id, string $name, FoodType $type, float $quantity, ?Unit $unit = null)
     {
         if ($id !== null) {
-            $this->id = $id; // Set the ID if provided
+            $this->id = $id;
         }
         $this->name = $name;
         $this->type = $type;
@@ -51,7 +48,7 @@ class Food
         $this->unit = $unit;
         $this->created_at = new \DateTimeImmutable();
     }
-
+    
     // Getters
     public function getId(): int
     {
@@ -68,7 +65,7 @@ class Food
         return $this->type;
     }
 
-    public function getQuantity(): int
+    public function getQuantity(): float
     {
         return $this->quantity;
     }
@@ -99,7 +96,7 @@ class Food
         $this->type = $type;
     }
 
-    public function setQuantity(int $quantity): void
+    public function setQuantity(float $quantity): void
     {
         $this->quantity = $quantity;
     }
@@ -112,23 +109,6 @@ class Food
     public function setUpdatedAt(?\DateTimeImmutable $updatedAt): void
     {
         $this->updated_at = $updatedAt;
-    }
-
-    public function updateQuantity(int $newQuantity): void
-    {
-        $this->quantity = $newQuantity;
-        $this->updated_at = new \DateTimeImmutable();
-    }
-    
-    public static function fromDto(FoodDtoInterface $foodDto): self
-    {
-        return new self(
-            $foodDto->getId(), // Set ID from the DTO
-            $foodDto->getName(),
-            $foodDto->getType(),
-            $foodDto->getQuantity(),
-            $foodDto->getUnit()
-        );
     }
 }
 

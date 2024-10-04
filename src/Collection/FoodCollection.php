@@ -23,9 +23,4 @@ abstract class FoodCollection implements FoodCollectionInterface
     {
         return $this->foods;
     }
-
-    public function search(string $filter): array
-    {
-        return []; // Implement search logic based on filter
-    }
 }

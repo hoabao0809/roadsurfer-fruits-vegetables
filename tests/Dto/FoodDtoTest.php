@@ -14,7 +14,7 @@ class FoodDtoTest extends TestCase
         $data = [
             'id' => 1,
             'name' => 'Apple',
-            'quantity' => 10,
+            'quantity' => 10.0,
             'unit' => 'kg',
             'type' => 'fruit'
         ];
@@ -23,7 +23,7 @@ class FoodDtoTest extends TestCase
 
         $this->assertSame(1, $foodDto->getId());
         $this->assertSame('Apple', $foodDto->getName());
-        $this->assertSame(10, $foodDto->getQuantity());
+        $this->assertSame(10.0, $foodDto->getQuantity());
         $this->assertSame(Unit::Kilogram, $foodDto->getUnit());
         $this->assertSame(FoodType::Fruit, $foodDto->getType());
     }

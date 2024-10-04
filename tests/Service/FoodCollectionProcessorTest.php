@@ -1,51 +1,83 @@
 <?php
 declare(strict_types=1);
 
-use PHPUnit\Framework\TestCase;
+namespace App\Tests\Service;
+
+use App\Collection\FoodCollectionInterface;
 use App\Service\FoodCollectionProcessor;
-use App\Utils\FileLoader\FileLoaderInterface;
 use App\Service\FoodCollectionServiceInterface;
-use App\Collection\FruitCollection;
-use App\Collection\VegetableCollection;
+use App\Utils\FileLoader\FileLoaderInterface;
+use Psr\Log\LoggerInterface;
+use PHPUnit\Framework\TestCase;
 
-class FoodCollectionProcessorTest extends TestCase
+final class FoodCollectionProcessorTest extends TestCase
 {
-    public function testProcessLoadsAndSavesCollections()
-    {
-        // Arrange
-        $fileLoaderMock = $this->createMock(FileLoaderInterface::class);
-        $foodCollectionServiceMock = $this->createMock(FoodCollectionServiceInterface::class);
+    private FileLoaderInterface $fileLoaderMock;
+    private FoodCollectionServiceInterface $foodCollectionServiceMock;
+    private LoggerInterface $loggerMock;
+    private FoodCollectionProcessor $foodCollectionProcessor;
 
-        // Prepare a fake data set returned by file loader
+    protected function setUp(): void
+    {
+        $this->fileLoaderMock = $this->createMock(FileLoaderInterface::class);
+        $this->foodCollectionServiceMock = $this->createMock(FoodCollectionServiceInterface::class);
+        $this->loggerMock = $this->createMock(LoggerInterface::class);
+
+        $this->foodCollectionProcessor = new FoodCollectionProcessor(
+            $this->fileLoaderMock,
+            $this->foodCollectionServiceMock,
+            $this->loggerMock
+        );
+    }
+
+    public function testProcessExtractsAndSavesCollections(): void
+    {
+        $filePath = 'var/data/request.json';
         $foodItems = [
-            ['id' => 1, 'name' => 'Apple', 'quantity' => 100, 'unit' => 'g', 'type' => 'fruit'],
-            ['id' => 2, 'name' => 'Carrot', 'quantity' => 200, 'unit' => 'g', 'type' => 'vegetable']
+            ['type' => 'fruit', 'name' => 'Apple', 'quantity' => 10, 'unit' => 'kg'],
+            ['type' => 'vegetable', 'name' => 'Carrot', 'quantity' => 5, 'unit' => 'kg'],
         ];
 
-        $fileLoaderMock->expects($this->once())
+        $this->fileLoaderMock->expects($this->once())
             ->method('load')
-            ->with('fake_file_path')
+            ->with($filePath)
             ->willReturn($foodItems);
 
-        // Prepare fruit and vegetable collections
-        $fruitCollection = new FruitCollection();
-        $vegetableCollection = new VegetableCollection();
+        $fruitCollectionMock = $this->createMock(FoodCollectionInterface::class);
+        $vegetableCollectionMock = $this->createMock(FoodCollectionInterface::class);
 
-        // The service should extract and save collections
-        $foodCollectionServiceMock->expects($this->once())
+        $this->foodCollectionServiceMock->expects($this->once())
             ->method('extractCollections')
             ->with($foodItems)
-            ->willReturn([$fruitCollection, $vegetableCollection]);
+            ->willReturn([$fruitCollectionMock, $vegetableCollectionMock]);
 
-        $foodCollectionServiceMock->expects($this->exactly(2))
+        $this->foodCollectionServiceMock->expects($this->exactly(2))
             ->method('saveCollection')
-            ->withConsecutive([$fruitCollection], [$vegetableCollection]);
+            ->withConsecutive([$fruitCollectionMock], [$vegetableCollectionMock]);
 
-        $processor = new FoodCollectionProcessor($fileLoaderMock, $foodCollectionServiceMock);
+        $this->loggerMock->expects($this->exactly(2))
+            ->method('info')
+            ->withConsecutive(
+                ['Processing food collection from file: ' . $filePath],
+                ['Food collections processed successfully.']
+            );
 
-        // Act
-        $processor->process('fake_file_path');
+        $this->foodCollectionProcessor->process($filePath);
+    }
 
-        // Assert: nothing to assert here as expectations are already set on mocks
+    public function testProcessHandlesEmptyFoodItems(): void
+    {
+        $filePath = 'var/data/request.json';
+
+        $this->fileLoaderMock->expects($this->once())
+            ->method('load')
+            ->with($filePath)
+            ->willReturn([]);
+
+        $this->loggerMock->expects($this->once())
+            ->method('warning')
+            ->with('No food items found in the file.');
+
+        $this->foodCollectionProcessor->process($filePath);
     }
 }

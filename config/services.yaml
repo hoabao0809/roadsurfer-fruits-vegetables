@@ -1,8 +1,3 @@
-# This file is the entry point to configure your own services.
-# Files in the packages/ subdirectory configure your dependencies.
-
-parameters:
-
 services:
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
@@ -15,11 +10,31 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    # Define custom service alias for FileLoader
     App\Utils\FileLoader\FileLoaderInterface:
         alias: App\Utils\FileLoader\JsonFileLoader
 
-    # Register JsonFileLoader service explicitly
     App\Utils\FileLoader\JsonFileLoader:
         autowire: true
         autoconfigure: true
+
+    App\Controller\Api\FoodController:
+        tags: ['controller.service_arguments']
+
+    App\Service\FoodServiceInterface:
+        class: App\Service\FoodService
+        public: true                     
+
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']
+
+    App\Controller\Api\FoodImportController:
+        arguments:
+            $filePath: '%food_file_path%'
+
+    App\Service\FoodCollectionProcessor:
+        public: true                     
+
+parameters:
+    food_file_path: '%kernel.project_dir%/request.json' 
+    

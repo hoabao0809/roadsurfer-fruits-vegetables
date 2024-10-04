@@ -11,7 +11,7 @@ interface FoodDtoInterface
     public function getId(): ?int;
     public function getName(): string;
     public function getType(): FoodType;
-    public function getQuantity(): int;
+    public function getQuantity(): float;
     public function getUnit(): Unit;
 
 }

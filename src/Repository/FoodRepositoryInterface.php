@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Dto\SearchFoodCriteria;
 use App\Entity\Food;
 
 interface FoodRepositoryInterface
@@ -11,5 +12,5 @@ interface FoodRepositoryInterface
     
     public function add(Food $food): void;
 
-    public function addMany(array $foodEntities): void;
+    public function search(SearchFoodCriteria $criteria): array;
 }
